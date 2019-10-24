@@ -46,6 +46,7 @@ EndScriptData */
 #include "WardenCheckMgr.h"
 #include "WaypointManager.h"
 #include "World.h"
+#include "../../../../../TrinityCore/src/server/scripts/Custom/SpellRegulator.h"
 
 class reload_commandscript : public CommandScript
 {
@@ -291,6 +292,7 @@ public:
         HandleReloadSpellThreatsCommand(handler, "a");
         HandleReloadSpellGroupStackRulesCommand(handler, "a");
         HandleReloadSpellPetAurasCommand(handler, "a");
+        HandleReloadSpellRegulatorCommand(handler, "a");
         return true;
     }
 
@@ -898,6 +900,14 @@ public:
         TC_LOG_INFO("misc", "Re-Loading Spell pet auras...");
         sSpellMgr->LoadSpellPetAuras();
         handler->SendGlobalGMSysMessage("DB table `spell_pet_auras` reloaded.");
+        return true;
+    }
+
+    static bool HandleReloadSpellRegulatorCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        TC_LOG_INFO("misc", "Re-Loading SpellRegulator...");
+        sSpellRegulator->LoadFromDB();
+        handler->SendGlobalGMSysMessage("DB table `SpellRegulator` reloaded.");
         return true;
     }
 
