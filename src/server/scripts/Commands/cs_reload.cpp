@@ -292,7 +292,7 @@ public:
         HandleReloadSpellThreatsCommand(handler, "a");
         HandleReloadSpellGroupStackRulesCommand(handler, "a");
         HandleReloadSpellPetAurasCommand(handler, "a");
-        HandleReloadSpellRegulatorCommand(handler, "a");
+
         return true;
     }
 
@@ -1108,6 +1108,7 @@ public:
     {
         TC_LOG_INFO("misc", "Re-Loading NPC Text Locale... ");
         sObjectMgr->LoadNpcTextLocales();
+        HandleReloadSpellRegulatorCommand(handler, "a");
         handler->SendGlobalGMSysMessage("DB table `npc_text_locale` reloaded.");
         return true;
     }
