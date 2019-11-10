@@ -150,6 +150,10 @@ public:
                         else
                             pHatefulTarget = (secondThreat->GetVictim()->GetHealth() < thirdThreat->GetVictim()->GetHealth()) ? thirdThreat->GetVictim() : secondThreat->GetVictim();
 
+
+                        if (!pHatefulTarget->IsWithinMeleeRange(me))
+                            pHatefulTarget = currentVictim;
+
                         // add threat to highest threat targets
                         AddThreat(currentVictim, HATEFUL_THREAT_AMT);
                         if (secondThreat)
