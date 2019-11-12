@@ -444,6 +444,10 @@ GameObject* SpellScript::GetGObjCaster() const
     return m_spell->GetCaster()->ToGameObject();
 }
 
+WorldObject* SpellScript::GetWObjectCaster() const {
+    return m_spell->GetCaster();
+}
+
 Unit* SpellScript::GetOriginalCaster() const
 {
     return m_spell->GetOriginalCaster();

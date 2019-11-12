@@ -194,7 +194,7 @@ public:
                                     if (GameObject* tile = ObjectAccessor::GetGameObject(*me, tileGUID))
                                     {
                                         tile->SendCustomAnim(0);
-                                        tile->CastSpell(nullptr, SPELL_ERUPTION);
+                                        tile->CastSpell(tile, SPELL_ERUPTION);
                                     }
 
                         if (_safeSection == 0)
@@ -233,14 +233,17 @@ class spell_heigan_eruption : public SpellScriptLoader
 
             void HandleScript(SpellEffIndex /*eff*/)
             {
-                Unit* caster = GetCaster();
+                WorldObject* caster = GetWObjectCaster();
                 if (!caster || !GetHitUnit())
                     return;
 
                 if (GetHitDamage() >= int32(GetHitUnit()->GetHealth()))
                     if (InstanceScript* instance = caster->GetInstanceScript())
-                        if (Creature* Heigan = ObjectAccessor::GetCreature(*caster, instance->GetGuidData(DATA_HEIGAN)))
-                            Heigan->AI()->KilledUnit(GetHitUnit());
+                        if (Creature* heigan = caster->GetMap()->GetCreature(instance->GetGuidData(DATA_HEIGAN)))
+                        {
+                            if (heigan->AI() && heigan->IsInWorld())
+                                heigan->AI()->KilledUnit(GetHitUnit());
+                        }
             }
 
             void Register() override

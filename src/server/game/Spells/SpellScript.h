@@ -392,6 +392,7 @@ class TC_GAME_API SpellScript : public _SpellScript
         // methods useable during all spell handling phases
         Unit* GetCaster() const;
         GameObject* GetGObjCaster() const;
+        WorldObject* GetWObjectCaster() const;
         Unit* GetOriginalCaster() const;
         SpellInfo const* GetSpellInfo() const;
         SpellValue const* GetSpellValue() const;
