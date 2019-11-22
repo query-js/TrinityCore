@@ -39,6 +39,8 @@ struct AchievementEntry;
 struct AreaTableEntry;
 struct AreaTriggerEntry;
 struct ArtifactPowerRankEntry;
+struct AzeriteEssencePowerEntry;
+struct AzeriteItemMilestonePowerEntry;
 struct BarberShopStyleEntry;
 struct CharTitlesEntry;
 struct ChatChannelsEntry;
@@ -46,6 +48,7 @@ struct ChrSpecializationEntry;
 struct CreatureTemplate;
 struct CurrencyTypesEntry;
 struct FactionEntry;
+struct ItemAdditionalLoadInfo;
 struct ItemExtendedCostEntry;
 struct ItemLimitCategoryEntry;
 struct ItemSetEffect;
@@ -749,6 +752,9 @@ enum PlayerLoginQueryIndex
     PLAYER_LOGIN_QUERY_LOAD_REPUTATION,
     PLAYER_LOGIN_QUERY_LOAD_INVENTORY,
     PLAYER_LOGIN_QUERY_LOAD_ARTIFACTS,
+    PLAYER_LOGIN_QUERY_LOAD_AZERITE,
+    PLAYER_LOGIN_QUERY_LOAD_AZERITE_MILESTONE_POWERS,
+    PLAYER_LOGIN_QUERY_LOAD_AZERITE_UNLOCKED_ESSENCES,
     PLAYER_LOGIN_QUERY_LOAD_ACTIONS,
     PLAYER_LOGIN_QUERY_LOAD_MAIL_COUNT,
     PLAYER_LOGIN_QUERY_LOAD_MAIL_DATE,
@@ -899,23 +905,21 @@ struct BGData
 
 struct VoidStorageItem
 {
-    VoidStorageItem() : ItemId(0), ItemEntry(0), RandomBonusListId(0), ItemUpgradeId(0), FixedScalingLevel(0), ArtifactKnowledgeLevel(0), Context(0) { }
+    VoidStorageItem() : ItemId(0), ItemEntry(0), RandomBonusListId(0), FixedScalingLevel(0), ArtifactKnowledgeLevel(0), Context(0) { }
     VoidStorageItem(uint64 id, uint32 entry, ObjectGuid const& creator, ItemRandomBonusListId randomBonusListId,
-        uint32 upgradeId, uint32 fixedScalingLevel, uint32 artifactKnowledgeLevel, uint8 context, std::vector<int32> const& bonuses)
+        uint32 fixedScalingLevel, uint32 artifactKnowledgeLevel, uint8 context, std::vector<int32> const& bonuses)
         : ItemId(id), ItemEntry(entry), CreatorGuid(creator), RandomBonusListId(randomBonusListId),
-        ItemUpgradeId(upgradeId), FixedScalingLevel(fixedScalingLevel), ArtifactKnowledgeLevel(artifactKnowledgeLevel), Context(context)
+        FixedScalingLevel(fixedScalingLevel), ArtifactKnowledgeLevel(artifactKnowledgeLevel), Context(context)
     {
         BonusListIDs.insert(BonusListIDs.end(), bonuses.begin(), bonuses.end());
     }
     VoidStorageItem(VoidStorageItem&& vsi) noexcept : ItemId(vsi.ItemId), ItemEntry(vsi.ItemEntry), CreatorGuid(vsi.CreatorGuid), RandomBonusListId(vsi.RandomBonusListId),
-        ItemUpgradeId(vsi.ItemUpgradeId), FixedScalingLevel(vsi.FixedScalingLevel),
-        ArtifactKnowledgeLevel(vsi.ArtifactKnowledgeLevel), Context(vsi.Context), BonusListIDs(std::move(vsi.BonusListIDs)) { }
+        FixedScalingLevel(vsi.FixedScalingLevel), ArtifactKnowledgeLevel(vsi.ArtifactKnowledgeLevel), Context(vsi.Context), BonusListIDs(std::move(vsi.BonusListIDs)) { }
 
     uint64 ItemId;
     uint32 ItemEntry;
     ObjectGuid CreatorGuid;
     ItemRandomBonusListId RandomBonusListId;
-    uint32 ItemUpgradeId;
     uint32 FixedScalingLevel;
     uint32 ArtifactKnowledgeLevel;
     uint8 Context;
@@ -1190,10 +1194,12 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         uint32 GetCurrencyOnWeek(uint32 id) const;
         /// return week cap by currency id
         uint32 GetCurrencyWeekCap(uint32 id) const;
+        /// return tracked currency count by currency id
+        uint32 GetTrackedCurrencyCount(uint32 id) const;
         /// return presence related currency
         bool HasCurrency(uint32 id, uint32 count) const;
         /// initialize currency count for custom initialization at create character
-        void SetCurrency(uint32 id, uint32 count, bool printLog = true);
+        void SetCreateCurrency(uint32 id, uint32 count, bool printLog = true);
         void ResetCurrencyWeekCap();
 
         /**
@@ -1307,8 +1313,8 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         bool CanAddQuest(Quest const* quest, bool msg) const;
         bool CanCompleteQuest(uint32 quest_id);
         bool CanCompleteRepeatableQuest(Quest const* quest);
-        bool CanRewardQuest(Quest const* quest, bool msg);
-        bool CanRewardQuest(Quest const* quest, uint32 reward, bool msg);
+        bool CanRewardQuest(Quest const* quest, bool msg) const;
+        bool CanRewardQuest(Quest const* quest, uint32 reward, bool msg) const;
         void AddQuestAndCheckCompletion(Quest const* quest, Object* questGiver);
         void AddQuest(Quest const* quest, Object* questGiver);
         void AbandonQuest(uint32 quest_id);
@@ -1335,8 +1341,8 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         bool SatisfyQuestNextChain(Quest const* qInfo, bool msg) const;
         bool SatisfyQuestPrevChain(Quest const* qInfo, bool msg);
         bool SatisfyQuestDay(Quest const* qInfo, bool msg) const;
-        bool SatisfyQuestWeek(Quest const* qInfo, bool msg);
-        bool SatisfyQuestMonth(Quest const* qInfo, bool msg);
+        bool SatisfyQuestWeek(Quest const* qInfo, bool msg) const;
+        bool SatisfyQuestMonth(Quest const* qInfo, bool msg) const;
         bool SatisfyQuestSeasonal(Quest const* qInfo, bool msg) const;
         bool GiveQuestSourceItem(Quest const* quest);
         bool TakeQuestSourceItem(uint32 questId, bool msg);
@@ -1541,8 +1547,8 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SendProficiency(ItemClass itemClass, uint32 itemSubclassMask) const;
         void SendKnownSpells();
         bool AddSpell(uint32 spellId, bool active, bool learning, bool dependent, bool disabled, bool loading = false, int32 fromSkill = 0);
-        void LearnSpell(uint32 spell_id, bool dependent, int32 fromSkill = 0);
-        void RemoveSpell(uint32 spell_id, bool disabled = false, bool learn_low_rank = true);
+        void LearnSpell(uint32 spell_id, bool dependent, int32 fromSkill = 0, bool suppressMessaging = false);
+        void RemoveSpell(uint32 spell_id, bool disabled = false, bool learn_low_rank = true, bool suppressMessaging = false);
         void ResetSpells(bool myClassOnly = false);
         void LearnCustomSpells();
         void LearnDefaultSkills();
@@ -1919,8 +1925,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         bool isHonorOrXPTarget(Unit const* victim) const;
 
         bool GetsRecruitAFriendBonus(bool forXP);
-        uint8 GetGrantableLevels() const { return m_grantableLevels; }
-        void SetGrantableLevels(uint8 val) { m_grantableLevels = val; }
 
         ReputationMgr&       GetReputationMgr()       { return *m_reputationMgr; }
         ReputationMgr const& GetReputationMgr() const { return *m_reputationMgr; }
@@ -2012,6 +2016,10 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void UpdateItemSetAuras(bool formChange = false);
         void ApplyArtifactPowers(Item* item, bool apply);
         void ApplyArtifactPowerRank(Item* artifact, ArtifactPowerRankEntry const* artifactPowerRank, bool apply);
+        void ApplyAzeritePowers(Item* item, bool apply);
+        void ApplyAzeriteItemMilestonePower(Item* item, AzeriteItemMilestonePowerEntry const* azeriteItemMilestonePower, bool apply);
+        void ApplyAzeriteEssence(Item* item, uint32 azeriteEssenceId, uint32 rank, bool major, bool apply);
+        void ApplyAzeriteEssencePower(Item* item, AzeriteEssencePowerEntry const* azeriteEssencePower, bool major, bool apply);
 
         void CastItemCombatSpell(DamageInfo const& damageInfo);
         void CastItemCombatSpell(DamageInfo const& damageInfo, Item* item, ItemTemplate const* proto);
@@ -2489,11 +2497,12 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void _LoadAuras(PreparedQueryResult auraResult, PreparedQueryResult effectResult, uint32 timediff);
         void _LoadGlyphAuras();
         void _LoadBoundInstances(PreparedQueryResult result);
-        void _LoadInventory(PreparedQueryResult result, PreparedQueryResult artifactsResult, uint32 timeDiff);
+        void _LoadInventory(PreparedQueryResult result, PreparedQueryResult artifactsResult, PreparedQueryResult azeriteResult,
+            PreparedQueryResult azeriteItemMilestonePowersResult, PreparedQueryResult azeriteItemUnlockedEssencesResult, uint32 timeDiff);
         void _LoadVoidStorage(PreparedQueryResult result);
         void _LoadMailInit(PreparedQueryResult resultUnread, PreparedQueryResult resultDelivery);
         void _LoadMail();
-        void _LoadMailedItems(Mail* mail);
+        void _LoadMailedItem(Mail* mail, Field* fields, ItemAdditionalLoadInfo* addionalData);
         void _LoadQuestStatus(PreparedQueryResult result);
         void _LoadQuestStatusObjectives(PreparedQueryResult result);
         void _LoadQuestStatusRewarded(PreparedQueryResult result);
@@ -2699,8 +2708,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         bool CanAlwaysSee(WorldObject const* obj) const override;
 
         bool IsAlwaysDetectableFor(WorldObject const* seer) const override;
-
-        uint8 m_grantableLevels;
 
         uint8 m_fishingSteps;
 
